@@ -1,0 +1,183 @@
+#include <iostream>
+#include <vector>
+#include <climits>
+#include <algorithm>
+
+struct tree // структура дерева для дерева остова
+{
+    int num; // номер текущей вершины
+    int parent; // для хранения минимального остова
+    double key;    // для хранения весов ребер
+    bool inMST; // для отслеживания вершин, включенных в минимальный остов
+    tree() { num = 0; parent = -1; key = INT_MAX; inMST = false; }
+};
+
+struct dot // структура точки
+{
+    double x;
+    double y;
+    dot() { x = 1. * (rand() % 100); y = 1. * (rand() % 100); }
+    double getX() { return x; }
+    double getY() { return y; }
+};
+
+// Вычисление расстояния между двумя точками
+double distance(dot d1, dot d2) {
+    double a = abs(d1.getX() - d2.getX());
+    double b = abs(d1.getY() - d2.getY());
+    return sqrt(a * a + b * b);
+}
+
+bool treeCompare(tree a, tree b) { return (a.key - b.key) <= 0; } //сравнение для функции std::sort
+
+// Функция для построения минимального остова графа с использованием алгоритма Прима
+std::vector<tree> primMST(std::vector<std::vector<double>>& graph, int n) {
+
+    std::vector<tree> data(n); //вектор для хранения данных будущего дерева остова
+
+    // Начинаем с первой вершины
+    data[0].key = 0;
+    data[0].parent = -1;
+
+    for (size_t count = 0; count < n - 1; ++count) {
+        // Находим вершину с минимальным ключом, которая еще не включена в остов
+        int u = -1;
+        for (size_t i = 0; i < n; ++i) {
+            if (!data[i].inMST && (u == -1 || data[i].key < data[u].key)) {
+                u = i;
+            }
+        }
+
+        data[u].inMST = true;
+
+        // Обновляем ключи и родительские вершины соседей выбранной вершины
+        for (size_t i = 0; i < n; ++i) {
+            if (graph[u][i] && !data[i].inMST && graph[u][i] < data[i].key) {
+                data[i].parent = u;
+                data[i].key = graph[u][i];
+            }
+        }
+    }
+
+    for (size_t i = 1; i < n; ++i) {
+        //std::cout << data[i].parent << " - " << i << "   " << graph[i][data[i].parent] << std::endl;
+        data[i].num = i;
+        //std::cout << data[i].parent << " - " << data[i].num << "   " << data[i].key << std::endl;
+    }
+    
+    return data;
+}
+
+int main() {
+    setlocale(LC_ALL, "ru");
+    int n = 10; // количество точек
+
+    int k = 2;
+    // матрица смежности графа
+    std::vector<std::vector<double>> graph(n, std::vector<double>(n));
+
+    std::vector<int> klust(n, 0); // массив кластеров (изначально 1)
+
+    // генерация точек и вывод их координат
+    std::vector<dot> dots(n);
+    for (size_t i = 0; i < graph.size(); ++i) {
+        for (size_t j = 0; j < i; ++j) {
+            graph[j][i] = graph[i][j] = distance(dots[i], dots[j]);
+        }
+        std::cout << i << " " << dots[i].getX() << " " << dots[i].getY() << std::endl;
+    } std::cout << std::endl;
+
+
+    // вывод матрицы смежности
+    std::cout << "матрица смежности между точками:" << std::endl;
+    std::cout << std::endl << std::endl;
+    for (size_t i = 0; i < graph.size(); ++i) {
+        for (size_t j = 0; j < graph.size(); ++j) {
+            std::cout << graph[i][j] << "\t";
+        } std::cout << std::endl << std::endl;
+    }
+
+    std::vector<tree> ostoveTree = primMST(graph, n); // выделение ребер минимального остова
+
+    std::sort(begin(ostoveTree), end(ostoveTree), treeCompare); // сортировка ребер в порядке возрастания весов
+
+    // вывод ребер дерева остова
+    std::cout << std::endl << std::endl;
+    std::cout << "ребра дерева остова (отсортированные):" << std::endl;
+    std::cout << std::endl << std::endl;
+    for (size_t i = 1; i < ostoveTree.size(); ++i) {
+        std::cout << ostoveTree[i].parent << " - " << ostoveTree[i].num << "   " << ostoveTree[i].key << std::endl;
+    }
+
+    // матрица смежности дерева остова
+    std::vector<std::vector<double>> adjMat(n, std::vector<double>(n));
+    for (size_t i = 0; i < adjMat.size(); ++i) {
+        for (size_t j = 0; j <= i; ++j) {
+            adjMat[j][i] = adjMat[i][j] = 0;
+        }
+    }
+    for (size_t i = 1; i < n; ++i) {
+        adjMat[ostoveTree[i].parent][ostoveTree[i].num] = adjMat[ostoveTree[i].num][ostoveTree[i].parent] = ostoveTree[i].key;
+    }
+
+    // вывод матрицы смежности
+    std::cout << std::endl << std::endl;
+    std::cout << "матрица смежности дерева остова:" << std::endl;
+    std::cout << std::endl << std::endl;
+    for (size_t i = 0; i < adjMat.size(); ++i) {
+        for (size_t j = 0; j < adjMat.size(); ++j) {
+            std::cout << adjMat[i][j] << "\t";
+        } std::cout << std::endl << std::endl;
+    }
+
+    std::vector<int> parent(n, 0);
+    std::vector<int> child(n, 0);
+    std::vector<tree> copyostoveTree = ostoveTree;
+    for (size_t i = 0; i < n; i++) {
+        parent[copyostoveTree[i].num] = copyostoveTree[i].parent;
+        if(i > 0)child[copyostoveTree[i].parent] = copyostoveTree[i].num;
+        //std::cout << parent[copyostoveTree[i].num] << "\t" << copyostoveTree[i].num << "\t" << copyostoveTree[i].key << std::endl;
+        std::cout << parent[copyostoveTree[i].num] << "\t" << copyostoveTree[i].num << "\t" << copyostoveTree[i].key << std::endl;
+    }
+
+    for (size_t i = 1; i < n; i++) {
+        if (i == k) break; 
+        double vd = 0;
+        // находим максимальное ребро
+        vd = copyostoveTree[n - i].key;
+        parent[copyostoveTree[n - i].num] = -1;
+        child[copyostoveTree[n - i].parent] = -1;
+        copyostoveTree[n - i].key = INT_MAX;
+        // убираем его
+        for (size_t i = 0; i < adjMat.size(); ++i) {
+            for (size_t j = 0; j < i; ++j) {
+                if ((adjMat[i][j] - vd) == 0) {
+                    adjMat[j][i] = adjMat[i][j] -= vd;
+                }
+            }
+        }
+    }
+
+    std::cout << std::endl << std::endl;
+    for (size_t i = 0; i < n; i++) {
+        std::cout << parent[copyostoveTree[i].num] << "\t" << copyostoveTree[i].num << "\t" << copyostoveTree[i].key << std::endl;
+    }
+
+    std::cout << std::endl << std::endl;
+    for (size_t i = 1; i < n; i++) {
+        std::cout << child[copyostoveTree[i].parent] << "\t" << copyostoveTree[i].num << "\t" << copyostoveTree[i].key << std::endl;
+    }
+
+    /*for (size_t i = n; i > 0; i--) {
+        if (k < 1) break;
+        int parentU = i;
+        while (parent[parentU] != -1) {
+            klust[parentU] = k;
+            parentU = parent[parentU];
+        }
+        if ((parent[copyostoveTree[i].num] == -1) && (1))
+        k--;
+    }*/
+
+    return 0;
+}
