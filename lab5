@@ -1,7 +1,9 @@
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 #include <climits>
 #include <algorithm>
+#include <ctime>
 
 struct tree // структура дерева для дерева остова
 {
@@ -17,6 +19,7 @@ struct dot // структура точки
     double x;
     double y;
     dot() { x = 1. * (rand() % 100); y = 1. * (rand() % 100); }
+    dot(double X, double Y) : x(X), y(Y) {}
     double getX() { return x; }
     double getY() { return y; }
 };
@@ -28,7 +31,7 @@ double distance(dot d1, dot d2) {
     return sqrt(a * a + b * b);
 }
 
-bool treeCompare(tree a, tree b) { return (a.key - b.key) <= 0; } //сравнение для функции std::sort
+bool treeCompare(tree a, tree b) { return (a.key - b.key) < 0; } //сравнение для функции std::sort
 
 // Функция для построения минимального остова графа с использованием алгоритма Прима
 std::vector<tree> primMST(std::vector<std::vector<double>>& graph, int n) {
@@ -39,10 +42,10 @@ std::vector<tree> primMST(std::vector<std::vector<double>>& graph, int n) {
     data[0].key = 0;
     data[0].parent = -1;
 
-    for (size_t count = 0; count < n - 1; ++count) {
+    for (int count = 0; count < n - 1; ++count) {
         // Находим вершину с минимальным ключом, которая еще не включена в остов
         int u = -1;
-        for (size_t i = 0; i < n; ++i) {
+        for (int i = 0; i < n; ++i) {
             if (!data[i].inMST && (u == -1 || data[i].key < data[u].key)) {
                 u = i;
             }
@@ -51,63 +54,123 @@ std::vector<tree> primMST(std::vector<std::vector<double>>& graph, int n) {
         data[u].inMST = true;
 
         // Обновляем ключи и родительские вершины соседей выбранной вершины
-        for (size_t i = 0; i < n; ++i) {
+        for (int i = 0; i < n; ++i) {
             if (graph[u][i] && !data[i].inMST && graph[u][i] < data[i].key) {
                 data[i].parent = u;
                 data[i].key = graph[u][i];
+                data[i].num = i;
             }
         }
-    }
-
-    for (size_t i = 1; i < n; ++i) {
-        //std::cout << data[i].parent << " - " << i << "   " << graph[i][data[i].parent] << std::endl;
-        data[i].num = i;
-        //std::cout << data[i].parent << " - " << data[i].num << "   " << data[i].key << std::endl;
     }
     
     return data;
 }
 
-int main() {
-    setlocale(LC_ALL, "ru");
-    int n = 10; // количество точек
+void search(int v, std::vector<int>& P, std::vector<int>& NV, int comp, int& newnum, std::vector<std::vector<int>>& L) {
+    P[v] = comp;
+    NV[v] = ++newnum;
 
-    int k = 2;
+    for (int j : L[v]) {
+        if (P[j] == 0) {
+            search(j, P, NV, comp, newnum, L);
+        }
+    }
+}
+
+std::vector<std::vector<int>> findConnectedComponents(int n, std::vector<std::vector<int>>& L) {
+    std::vector<int> P(n, 0); // Номера компонент
+    std::vector<int> NV(n); // Номера вершин в порядке обхода
+    int comp = 0; // Количество компонент
+    int newnum = 0; // Номер новой вершины
+
+    for (int k = 0; k < n; k++) {
+        if (P[k] == 0) {
+            comp++;
+            search(k, P, NV, comp, newnum, L);
+        }
+    }
+
+    std::vector<std::vector<int>> Component(comp + 1, std::vector<int>());
+    // Вывод результатов
+    for (int i = 1; i <= comp; i++) {
+        for (int j = 0; j < n; j++) {
+            if (P[j] == i) {
+                Component[i].push_back(j);
+            }
+        }
+    }
+    
+    return Component;
+}
+
+dot Centroid(std::vector<int> comp, std::vector<dot> dots) {
+    double x = 0;
+    double y = 0;
+    for (size_t i = 0; i < comp.size(); i++)
+    {
+        x += dots[comp[i]].getX();
+        y += dots[comp[i]].getY();
+    }
+    return dot(x / comp.size(), y / comp.size());
+}
+
+int main() {
+
+    setlocale(LC_ALL, "ru");
+    srand(time(0));
+
+    int n = 11; // количество точек
+    int k = 1; // количество кластеров
+
+    while (1){
+        std::cin >> k;
+        if ((k > 0) && (k <= n)) break;
+    }
+
     // матрица смежности графа
     std::vector<std::vector<double>> graph(n, std::vector<double>(n));
 
-    std::vector<int> klust(n, 0); // массив кластеров (изначально 1)
+
 
     // генерация точек и вывод их координат
     std::vector<dot> dots(n);
+    std::cout << std::endl << "точки: " << std::endl << std::endl;
     for (size_t i = 0; i < graph.size(); ++i) {
         for (size_t j = 0; j < i; ++j) {
             graph[j][i] = graph[i][j] = distance(dots[i], dots[j]);
         }
-        std::cout << i << " " << dots[i].getX() << " " << dots[i].getY() << std::endl;
-    } std::cout << std::endl;
+        std::cout << "(" << i << ")  x: " << dots[i].getX() << "\ty: " << dots[i].getY() << std::endl;
+    } 
 
-
-    // вывод матрицы смежности
-    std::cout << "матрица смежности между точками:" << std::endl;
-    std::cout << std::endl << std::endl;
-    for (size_t i = 0; i < graph.size(); ++i) {
-        for (size_t j = 0; j < graph.size(); ++j) {
-            std::cout << graph[i][j] << "\t";
-        } std::cout << std::endl << std::endl;
+    // вывод матрицы смежности между всеми точками
+    if(n <= 10){
+        std::cout << std::endl << std::endl << "матрица смежности между точками:" << std::endl << std::endl << "\t";
+        for (size_t i = 0; i < graph.size(); ++i) std::cout << "(" << i << ")" << "\t";
+        std::cout << std::endl << std::endl;
+        for (size_t i = 0; i < graph.size(); ++i) {
+            std::cout << "(" << i << ")" << "\t";
+            for (size_t j = 0; j < graph.size(); ++j) {
+                std::cout << graph[i][j] << "\t";
+            } std::cout << std::endl << std::endl;
+        }
     }
 
-    std::vector<tree> ostoveTree = primMST(graph, n); // выделение ребер минимального остова
+
+
+    // выделение ребер минимального остова
+    std::vector<tree> ostoveTree = primMST(graph, n); // вектор ребер минимального остова
 
     std::sort(begin(ostoveTree), end(ostoveTree), treeCompare); // сортировка ребер в порядке возрастания весов
 
+
+
     // вывод ребер дерева остова
-    std::cout << std::endl << std::endl;
-    std::cout << "ребра дерева остова (отсортированные):" << std::endl;
-    std::cout << std::endl << std::endl;
+    std::cout << std::endl << std::endl << "ребра дерева остова (отсортированные):" << std::endl << std::endl;
     for (size_t i = 1; i < ostoveTree.size(); ++i) {
-        std::cout << ostoveTree[i].parent << " - " << ostoveTree[i].num << "   " << ostoveTree[i].key << std::endl;
+        std::cout << "(" << ostoveTree[i].parent << ") - (" << ostoveTree[i].num << ") = " << ostoveTree[i].key << std::endl;
     }
+
+
 
     // матрица смежности дерева остова
     std::vector<std::vector<double>> adjMat(n, std::vector<double>(n));
@@ -120,64 +183,69 @@ int main() {
         adjMat[ostoveTree[i].parent][ostoveTree[i].num] = adjMat[ostoveTree[i].num][ostoveTree[i].parent] = ostoveTree[i].key;
     }
 
+
+
     // вывод матрицы смежности
-    std::cout << std::endl << std::endl;
-    std::cout << "матрица смежности дерева остова:" << std::endl;
-    std::cout << std::endl << std::endl;
-    for (size_t i = 0; i < adjMat.size(); ++i) {
-        for (size_t j = 0; j < adjMat.size(); ++j) {
-            std::cout << adjMat[i][j] << "\t";
-        } std::cout << std::endl << std::endl;
-    }
-
-    std::vector<int> parent(n, 0);
-    std::vector<int> child(n, 0);
-    std::vector<tree> copyostoveTree = ostoveTree;
-    for (size_t i = 0; i < n; i++) {
-        parent[copyostoveTree[i].num] = copyostoveTree[i].parent;
-        if(i > 0)child[copyostoveTree[i].parent] = copyostoveTree[i].num;
-        //std::cout << parent[copyostoveTree[i].num] << "\t" << copyostoveTree[i].num << "\t" << copyostoveTree[i].key << std::endl;
-        std::cout << parent[copyostoveTree[i].num] << "\t" << copyostoveTree[i].num << "\t" << copyostoveTree[i].key << std::endl;
-    }
-
-    for (size_t i = 1; i < n; i++) {
-        if (i == k) break; 
-        double vd = 0;
-        // находим максимальное ребро
-        vd = copyostoveTree[n - i].key;
-        parent[copyostoveTree[n - i].num] = -1;
-        child[copyostoveTree[n - i].parent] = -1;
-        copyostoveTree[n - i].key = INT_MAX;
-        // убираем его
+    if (n <= 10) {
+        std::cout << std::endl << std::endl << "матрица смежности дерева остова:" << std::endl << std::endl << "\t";
+        for (size_t i = 0; i < adjMat.size(); ++i) std::cout << "(" << i << ")" << "\t";
+        std::cout << std::endl << std::endl;
         for (size_t i = 0; i < adjMat.size(); ++i) {
-            for (size_t j = 0; j < i; ++j) {
-                if ((adjMat[i][j] - vd) == 0) {
-                    adjMat[j][i] = adjMat[i][j] -= vd;
-                }
-            }
+            std::cout << "(" << i << ")" << "\t";
+            for (size_t j = 0; j < adjMat.size(); ++j) {
+                std::cout << adjMat[i][j] << "\t";
+            } std::cout << std::endl << std::endl;
         }
     }
 
+
+
+    // удаляем самые большие ребра
+    for (int i = 1; i < k; i++)
+        ostoveTree.pop_back();
+
+    std::cout << std::endl << std::endl << "ребра дерева остова (после удаления):" << std::endl << std::endl;
+    for (size_t i = 1; i < ostoveTree.size(); ++i) {
+        std::cout << "(" << ostoveTree[i].parent << ") - (" << ostoveTree[i].num << ") = " << ostoveTree[i].key << std::endl;
+    }
+
+
+
+    // формирование списка смежных вершин
+    std::vector<std::vector<int>> adj_list(n, std::vector<int>());
+    
+    for (size_t i = 1; i < ostoveTree.size(); i++){ // добавление вершин
+        adj_list[ostoveTree[i].parent].push_back(ostoveTree[i].num);
+        adj_list[ostoveTree[i].num].push_back(ostoveTree[i].parent);
+    }
+    
+
+
+    // вывод списка смежных вершин
     std::cout << std::endl << std::endl;
+    std::cout << "список смежных вершин:" << std::endl << std::endl;
     for (size_t i = 0; i < n; i++) {
-        std::cout << parent[copyostoveTree[i].num] << "\t" << copyostoveTree[i].num << "\t" << copyostoveTree[i].key << std::endl;
-    }
+        std::cout << "(" << i << ")\t";
+        for (size_t j = 0; j < adj_list[i].size(); j++) {
+            std::cout << adj_list[i][j] << "\t";
+        } std::cout << std::endl;
+    }std::cout << std::endl;
 
-    std::cout << std::endl << std::endl;
-    for (size_t i = 1; i < n; i++) {
-        std::cout << child[copyostoveTree[i].parent] << "\t" << copyostoveTree[i].num << "\t" << copyostoveTree[i].key << std::endl;
-    }
+    // выделение компонент связности
+    std::vector<std::vector<int>> Comp = findConnectedComponents(n, adj_list);
 
-    /*for (size_t i = n; i > 0; i--) {
-        if (k < 1) break;
-        int parentU = i;
-        while (parent[parentU] != -1) {
-            klust[parentU] = k;
-            parentU = parent[parentU];
-        }
-        if ((parent[copyostoveTree[i].num] == -1) && (1))
-        k--;
-    }*/
+    // вывод компонент связности
+    for (size_t i = 1; i < Comp.size(); i++) {
+        std::cout << i << " компонента: " << std::endl;
+        dot centr = Centroid(Comp[i], dots), zero(0, 0), max(0, 0), min(FLT_MAX, FLT_MAX);
+        for (size_t j = 0; j < Comp[i].size(); j++) {
+            if (distance(dots[Comp[i][j]], zero) >= distance(max, zero))
+                max = dots[Comp[i][j]];
+            if (distance(dots[Comp[i][j]], zero) <= distance(min, zero))
+                min = dots[Comp[i][j]];
+        } std::cout << "размер - " << Comp[i].size() << "  Макс - (" << max.getX() << ", " <<max.getY() << ")  Мин - (" << min.getX() << ", " << min.getY() << ") " << "  Центроид - (" << centr.getX() << ", " << centr.getY() << ") " << std::endl << std::endl;
+    }std::cout << std::endl;
+
 
     return 0;
 }
