@@ -119,9 +119,16 @@ int main() {
     setlocale(LC_ALL, "ru");
     srand(time(0));
 
-    int n = 11; // количество точек
-    int k = 1; // количество кластеров
+    int n = 300; // количество точек
+    int k = 5; // количество кластеров
 
+    std::cout << "Введите количество точек: ";
+    while (1) {
+        std::cin >> n;
+        if (n > 0) break;
+    }
+
+    std::cout << "Введите количество кластеров: ";
     while (1){
         std::cin >> k;
         if ((k > 0) && (k <= n)) break;
@@ -134,13 +141,14 @@ int main() {
 
     // генерация точек и вывод их координат
     std::vector<dot> dots(n);
-    std::cout << std::endl << "точки: " << std::endl << std::endl;
+    if (n <= 50) std::cout << std::endl << "точки: " << std::endl << std::endl;
     for (size_t i = 0; i < graph.size(); ++i) {
         for (size_t j = 0; j < i; ++j) {
             graph[j][i] = graph[i][j] = distance(dots[i], dots[j]);
         }
-        std::cout << "(" << i << ")  x: " << dots[i].getX() << "\ty: " << dots[i].getY() << std::endl;
-    } 
+        if (n <= 50) std::cout << "(" << i << ")  x: " << dots[i].getX() << "\ty: " << dots[i].getY() << std::endl;
+    }
+
 
     // вывод матрицы смежности между всеми точками
     if(n <= 10){
@@ -165,11 +173,12 @@ int main() {
 
 
     // вывод ребер дерева остова
-    std::cout << std::endl << std::endl << "ребра дерева остова (отсортированные):" << std::endl << std::endl;
-    for (size_t i = 1; i < ostoveTree.size(); ++i) {
-        std::cout << "(" << ostoveTree[i].parent << ") - (" << ostoveTree[i].num << ") = " << ostoveTree[i].key << std::endl;
+    if (n <= 50) {
+        std::cout << std::endl << std::endl << "ребра дерева остова (отсортированные):" << std::endl << std::endl;
+        for (size_t i = 1; i < ostoveTree.size(); ++i) {
+            std::cout << "(" << ostoveTree[i].parent << ") - (" << ostoveTree[i].num << ") = " << ostoveTree[i].key << std::endl;
+        }
     }
-
 
 
     // матрица смежности дерева остова
@@ -204,9 +213,11 @@ int main() {
     for (int i = 1; i < k; i++)
         ostoveTree.pop_back();
 
-    std::cout << std::endl << std::endl << "ребра дерева остова (после удаления):" << std::endl << std::endl;
-    for (size_t i = 1; i < ostoveTree.size(); ++i) {
-        std::cout << "(" << ostoveTree[i].parent << ") - (" << ostoveTree[i].num << ") = " << ostoveTree[i].key << std::endl;
+    if (n <= 50) {
+        std::cout << std::endl << std::endl << "ребра дерева остова (после удаления):" << std::endl << std::endl;
+        for (size_t i = 1; i < ostoveTree.size(); ++i) {
+            std::cout << "(" << ostoveTree[i].parent << ") - (" << ostoveTree[i].num << ") = " << ostoveTree[i].key << std::endl;
+        }
     }
 
 
@@ -222,14 +233,16 @@ int main() {
 
 
     // вывод списка смежных вершин
-    std::cout << std::endl << std::endl;
-    std::cout << "список смежных вершин:" << std::endl << std::endl;
-    for (size_t i = 0; i < n; i++) {
-        std::cout << "(" << i << ")\t";
-        for (size_t j = 0; j < adj_list[i].size(); j++) {
-            std::cout << adj_list[i][j] << "\t";
-        } std::cout << std::endl;
-    }std::cout << std::endl;
+    if (n <= 50) {
+        std::cout << std::endl << std::endl;
+        std::cout << "список смежных вершин:" << std::endl << std::endl;
+        for (size_t i = 0; i < n; i++) {
+            std::cout << "(" << i << ")\t";
+            for (size_t j = 0; j < adj_list[i].size(); j++) {
+                std::cout << adj_list[i][j] << "\t";
+            } std::cout << std::endl;
+        }std::cout << std::endl;
+    }
 
     // выделение компонент связности
     std::vector<std::vector<int>> Comp = findConnectedComponents(n, adj_list);
